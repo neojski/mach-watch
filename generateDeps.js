@@ -5,17 +5,71 @@ var glob = require('glob');
 var path = require('path');
 var readline = require('readline');
 
-var p = process.argv[2];
-var file = path.resolve(process.cwd(), p);
+var baseDir = path.resolve(process.cwd(), process.argv[2]);
+var fileToResolve = process.argv[3] ? path.resolve(process.cwd(), process.argv[3]) : null;
 
-info('Processing: ' + file);
+info('Processing: ' + fileToResolve + ' inside ' + baseDir);
 
-glob(file + '/**', function (err, files) {
-  async.eachLimit(files, 20, processDeps);
+glob(baseDir + '/**', function (err, files) {
+  async.eachLimit(files, 20, processDeps, function () {
+    if (fileToResolve) {
+      var terminals = findTerminals(fileToResolve);
+      if (!terminals.length) {
+        error('I don\'t know what to build...');
+      } else {
+        info('Build: ' + findTerminals(fileToResolve));
+      }
+    }
+  });
 });
 
-function edge(from, to, desc) {
+var graph = {};
+var terminals = {};
+
+function isTerminal(u) {
+  return terminals[u];
+}
+
+// Edge from -> to means that to build file from we have to build file to.
+// If terminal then to can be build with mach.
+function edge(from, to, terminal, desc) {
   console.log(from + ' -> ' + to + ' (' + desc + ')');
+
+  if (terminal) {
+    terminals[to] = true;
+  }
+  graph[from] = graph[from] || [];
+  graph[from].push(to);
+}
+
+function findTerminals(from) {
+
+  var terminals = {}; // It would be easier to use map...
+  var vis = {};
+  function dfs(u) {
+    if (vis[u]) {
+      return;
+    }
+    vis[u] = true;
+
+    if (isTerminal(u)) {
+      terminals[u] = true;
+    }
+
+    if (!graph[u]) {
+      return;
+    }
+    for (var i = 0; i < graph[u].length; i++) {
+      var v = graph[u][i];
+      dfs(v);
+    }
+  }
+  dfs(from);
+  var res = [];
+  for (var i in terminals) {
+    res.push(i);
+  }
+  return res;
 }
 
 function info(msg) {
@@ -23,7 +77,9 @@ function info(msg) {
 }
 
 function debug(msg) {
-  console.log(msg.red);
+  console.log('<debug>'.red);
+  console.log(msg);
+  console.log('</ebug>'.red);
 }
 
 function error(msg) {
@@ -75,20 +131,36 @@ var processJs = lineProcessor(function (file, line) {
       return;
     }
     var includedFilePath = path.join(path.dirname(file), includedFileName);
-    edge(includedFilePath, file, '#include');
+    edge(includedFilePath, file, false, '#include');
   }
 });
 
 
 var processMozBuild = lineProcessor(function (file, line, lineNumber) {
   if (lineNumber === 0) {
-    error('TODO mozbuild: ' + file);
+    info('Analyzing moz.build: ' + file);
   }
+  // This is a very rough guess to match lines like:
+  //    'some_module.js',
+  var m = line.match(/^\s*'([^']+\.\w+)',?/);
+  if (!m) {
+    return;
+  }
+  var includedFileName = m[1];
+  if (!includedFileName) {
+    return;
+  }
+  var includedFilePath = path.join(path.dirname(file), includedFileName);
+  edge(includedFilePath, path.dirname(file), true, 'moz.build');
 });
 
-var processJar = lineProcessor(function (file, line) {
-  // This is a very rough guess!
-  // *+    whatever    (whatever)
+var processJar = lineProcessor(function (file, line, lineNumber) {
+  if (lineNumber === 0) {
+    info('Analyzing jar.mn: ' + file);
+  }
+  // This is a very rough guess...
+  // *+    whatever1    (whatever2)
+  // TODO: Second case - no whatever2 (see: /toolkit/content/jar.mn)
   var m = line.match(/^\s*[*+]{0,2}\s*\S+\s+\(([^)]+)\)\s*$/);
   if (!m) {
     return;
@@ -98,5 +170,5 @@ var processJar = lineProcessor(function (file, line) {
     return;
   }
   var includedFilePath = path.join(path.dirname(file), includedFileName);
-  edge(includedFilePath, path.dirname(file), 'jar.mn');
+  edge(includedFilePath, path.dirname(file), true, 'jar.mn');
 });
