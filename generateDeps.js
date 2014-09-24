@@ -3,25 +3,22 @@ var colors = require('colors');
 var fs = require('fs');
 var glob = require('glob');
 var path = require('path');
+var Promise = require('promise');
 var readline = require('readline');
 
-var baseDir = path.resolve(process.cwd(), process.argv[2]);
-var fileToResolve = process.argv[3] ? path.resolve(process.cwd(), process.argv[3]) : null;
 
-info('Processing: ' + fileToResolve + ' inside ' + baseDir);
-
-glob(baseDir + '/**', function (err, files) {
-  async.eachLimit(files, 20, processDeps, function () {
-    if (fileToResolve) {
-      var terminals = findTerminals(fileToResolve);
-      if (!terminals.length) {
-        error('I don\'t know what to build...');
-      } else {
-        info('Build: ' + findTerminals(fileToResolve));
-      }
-    }
+function preprocess(baseDir) {
+  return new Promise(function (resolve) {
+    info('Processing: ' + baseDir);
+    glob(baseDir + '/**', function (err, files) {
+      async.eachLimit(files, 20, processDeps, function () {
+        resolve({
+          find: findTerminals
+        });
+      });
+    });
   });
-});
+}
 
 var graph = {};
 var terminals = {};
@@ -172,3 +169,5 @@ var processJar = lineProcessor(function (file, line, lineNumber) {
   var includedFilePath = path.join(path.dirname(file), includedFileName);
   edge(includedFilePath, path.dirname(file), true, 'jar.mn');
 });
+
+module.exports = preprocess;
