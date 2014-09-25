@@ -26,12 +26,19 @@ depsPromise.then(function (deps) {
   log('Building deps failed: ' + reason, 'red');
 });
 
+function isInObj(f) {
+  return (f.slice(0, objDir.length) === objDir);
+}
+
 function startWatching(deps) {
   log('Deps built. Watching ' + baseDir + '.', 'green');
   watch.createMonitor(baseDir, {
     'ignoreDotFiles': true
   }, function (monitor) {
     monitor.on("changed", function (f, curr, prev) {
+      if (isInObj(f)) {
+        return;
+      }
       log('File ' + f + ' has changed', 'yellow');
       var dirToBuild = deps.find(f);
       if (dirToBuild) {
@@ -50,7 +57,11 @@ function build(file) {
   log('  Starting mach build: ' + command);
   exec(command, function (error, stdout, stderr) {
     log('  stdout:\n' + stdout);
-    log('  stderr:\n' + stderr);
+
+    var stderrstr = stderr.toString();
+    if (stderrstr) {
+      log('  stderr:\n' + stderr);
+    }
     if (error !== null) {
       log('  mach: ' + error, 'red');
     } else {
