@@ -1,37 +1,63 @@
 var colors = require('colors');
+var fs = require('fs');
 var path = require('path');
 var watch = require('watch');
 var generateDeps = require('./generateDepsFromObj.js');
 var exec = require('child_process').exec;
 
+process.on('uncaughtException', function(err) {
+  log('UncaughtException:', 'red');
+  console.log(err);
+});
+
 // Usage:
 // node watch-obj.js directory-to-watch firefox-obj-dir mach-command
 
 function log(msg, color) {
-  color = color || 'black';
+  var coloredMsg = color ? msg[color] : msg;
   var date = new Date();
-  console.log(date.toLocaleTimeString('en-US').slice(0, 8) + ' ' + msg[color]);
+  console.log(date.toLocaleTimeString('en-US').slice(0, 8) + ' ' + coloredMsg);
 }
 
-// TODO: Use arguments, configs
+// TODO: Use arguments, configs.
 var baseDir = path.resolve(process.cwd(), process.argv[2]);
 var objDir = path.resolve(process.cwd(), process.argv[3]);
 var machComand = path.resolve(process.cwd(), process.argv[4]);
 
-log('Starting deps traversal.');
-var depsPromise = generateDeps(objDir, baseDir);
-depsPromise.then(function (deps) {
-  startWatching(deps);
-}, function (reason) {
-  log('Building deps failed: ' + reason, 'red');
-});
+// Naive sanity checks.
+fs.stat(baseDir, function (err, res) {
+  if (err) {
+    return log('Base dir missing: ' + baseDir, 'red');
+  }
+  fs.stat(objDir, function (err, res) {
+    if (err) {
+      return log('Obj dir missing: ' + objDir, 'red');
+    }
+    fs.stat(machComand, function (err, res) {
+      if (err || !res.isFile()) {
+        return log('Mach command missing: ' + machComand, 'red');
+      }
+      start();
+    });
+  });
+})
+
+function start() {
+  log('Starting deps traversal: ' + objDir, 'yellow');
+  var depsPromise = generateDeps(objDir, baseDir);
+  depsPromise.then(function (deps) {
+    log('Deps built (' + deps.length + ' dirs found). Watching ' + baseDir + '.', 'green');
+    startWatching(deps);
+  }, function (reason) {
+    log('Building deps failed: ' + reason, 'red');
+  });
+}
 
 function isInObj(f) {
   return (f.slice(0, objDir.length) === objDir);
 }
 
 function startWatching(deps) {
-  log('Deps built. Watching ' + baseDir + '.', 'green');
   watch.createMonitor(baseDir, {
     'ignoreDotFiles': true
   }, function (monitor) {
