@@ -3,9 +3,14 @@ Mach watch
 
 Small utlility library helping you automatically build your Firefox front-end code.
 
-To watch:
-```bash
-node watch.js $MOZ/toolkit
+You have to have nodejs.
+
+To install dependencies:
+```
+npm install
 ```
 
-This is a very early version that only reports the directories you should build with your mach.
+To watch:
+```bash
+node watch-obj.js /mozilla/dir/you/want/to/watch /mozilla/obj/directory /path/to/mach/command 
+```
