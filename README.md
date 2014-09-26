@@ -12,5 +12,5 @@ npm install
 
 To watch:
 ```bash
-node watch-obj.js /mozilla/dir/you/want/to/watch /mozilla/obj/directory /path/to/mach/command 
+node watch.js /mozilla/dir/you/want/to/watch /mozilla/obj/directory /path/to/mach/command
 ```
