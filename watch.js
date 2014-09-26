@@ -13,9 +13,6 @@ process.on('uncaughtException', function(err) {
   }
 });
 
-// Usage:
-// node watch-obj.js directory-to-watch firefox-obj-dir mach-command
-
 function log(msg, color) {
   var coloredMsg = color ? msg[color] : msg;
   var date = new Date();
@@ -25,7 +22,8 @@ function log(msg, color) {
 // TODO: Use arguments, configs.
 var baseDir = path.resolve(process.cwd(), process.argv[2]);
 var objDir = path.resolve(process.cwd(), process.argv[3]);
-var machComand = path.resolve(process.cwd(), process.argv[4]);
+var watchDir = path.resolve(process.cwd(), process.argv[4]);
+var machComand = path.resolve(process.cwd(), process.argv[5]);
 
 // Naive sanity checks.
 fs.stat(baseDir, function (err, res) {
@@ -36,17 +34,23 @@ fs.stat(baseDir, function (err, res) {
     if (err) {
       return log('Obj dir missing: ' + objDir, 'red');
     }
-    fs.stat(machComand, function (err, res) {
-      if (err || !res.isFile()) {
-        return log('Mach command missing: ' + machComand, 'red');
+    fs.stat(watchDir, function (err, res) {
+      if (err) {
+        return log('Watch dir missing: ' + watchDir, 'red');
       }
-      start();
+      fs.stat(machComand, function (err, res) {
+        if (err || !res.isFile()) {
+          return log('Mach command missing: ' + machComand, 'red');
+        }
+        start();
+      });
     });
   });
 })
 
 function start() {
-  log('Preparing deps: ' + objDir + '.', 'yellow');
+  log('Base dir: ' + baseDir + '.', 'yellow');
+  log('Preparing deps for obj dir: ' + objDir + '.', 'yellow');
   var depsPromise = generateDeps(objDir, baseDir);
   depsPromise.then(function (deps) {
     log('Deps ready.', 'green');
@@ -67,10 +71,10 @@ function isRightExt(f) {
 
 function startWatching(deps) {
   log('Preparing files watcher.', 'yellow');
-  watch.createMonitor(baseDir, {
+  watch.createMonitor(watchDir, {
     'ignoreDotFiles': true
   }, function (monitor) {
-    log('Watcher started.', 'green');
+    log('Watcher started for dir: ' + watchDir + '.', 'green');
     monitor.on("changed", function (f, curr, prev) {
       if (isInObj(f)) {
         return;

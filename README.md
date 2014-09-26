@@ -10,7 +10,11 @@ To install dependencies:
 npm install
 ```
 
-To watch:
+Run
+---
+
+These commands will change. Please make sure you use the right one.
+
 ```bash
-node watch.js /mozilla/dir/you/want/to/watch /mozilla/obj/directory /path/to/mach/command
+node watch.js /mozilla/main/directory /mozilla/obj/directory /mozilla/directory/to/watch /path/to/mach/command
 ```
