@@ -57,6 +57,12 @@ function isInObj(f) {
   return (f.slice(0, objDir.length) === objDir);
 }
 
+function isRightExt(f) {
+  var ext = path.extname(f);
+  console.log(ext);
+  return ['.js', '.jsm', '.xul', '.xml'].indexOf(ext) >= 0;
+}
+
 function startWatching(deps) {
   watch.createMonitor(baseDir, {
     'ignoreDotFiles': true
@@ -64,6 +70,9 @@ function startWatching(deps) {
     monitor.on("changed", function (f, curr, prev) {
       if (isInObj(f)) {
         return;
+      }
+      if (!isRightExt(f)) {
+        return log('Ignoring ' + f + ' due to extension', 'yellow');
       }
       log('File ' + f + ' has changed', 'yellow');
       var dirToBuild = deps.find(f);
