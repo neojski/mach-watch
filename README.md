@@ -5,10 +5,10 @@ Small utlility library helping you automatically build your Firefox front-end co
 
 You have to have nodejs.
 
-To install dependencies:
-```
-npm install
-```
+To install:
+
+1. Install npm dependencies `npm install`.
+2. Install [fswatch](https://github.com/emcrisostomo/fswatch).
 
 Run
 ---

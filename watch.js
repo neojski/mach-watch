@@ -1,9 +1,9 @@
 var colors = require('colors');
 var fs = require('fs');
 var path = require('path');
-var watch = require('watch');
 var generateDeps = require('./generateDepsFromObjLazy.js');
 var exec = require('child_process').exec;
+var fswatch = require('./fswatch.js');
 
 process.on('uncaughtException', function(err) {
   log('UncaughtException:', 'red');
@@ -55,7 +55,7 @@ function start() {
   depsPromise.then(function (deps) {
     log('Deps ready.', 'green');
     startWatching(deps);
-  }, function (reason) {
+  }).then(null, function (reason) {
     log('Building deps failed: ' + reason, 'red');
   });
 }
@@ -71,26 +71,24 @@ function isRightExt(f) {
 
 function startWatching(deps) {
   log('Preparing files watcher.', 'yellow');
-  watch.createMonitor(watchDir, {
-    'ignoreDotFiles': true
-  }, function (monitor) {
-    log('Watcher started for dir: ' + watchDir + '.', 'green');
-    monitor.on("changed", function (f, curr, prev) {
-      if (isInObj(f)) {
-        return;
+  log('Watcher started for dir: ' + watchDir + '.', 'green');
+
+  var watcher = fswatch(watchDir);
+  watcher.on('change', function (f) {
+    if (isInObj(f)) {
+      return;
+    }
+    if (!isRightExt(f)) {
+      return log('Ignoring ' + f + ' due to extension (' + path.extname(f) + ')', 'yellow');
+    }
+    log('File ' + f + ' has changed.', 'yellow');
+    deps.find(f).then(function (dirToBuild) {
+      build(dirToBuild);
+    }, function (reason) {
+      log('  Unable to determine what to build: ' + reason, 'red');
+      if (reason.stack) {
+        log(reason.stack);
       }
-      if (!isRightExt(f)) {
-        return log('Ignoring ' + f + ' due to extension', 'yellow');
-      }
-      log('File ' + f + ' has changed.', 'yellow');
-      deps.find(f).then(function (dirToBuild) {
-        build(dirToBuild);
-      }, function (reason) {
-        log('  Unable to determine what to build: ' + reason, 'red');
-        if (reason.stack) {
-          log(reason.stack);
-        }
-      });
     });
   });
 }
