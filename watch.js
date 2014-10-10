@@ -2,8 +2,9 @@ var colors = require('colors');
 var fs = require('fs');
 var path = require('path');
 var generateDeps = require('./generateDepsFromObjLazy.js');
-var exec = require('child_process').exec;
 var fswatch = require('./fswatch.js');
+var machBuild = require('./mach-build.js');
+var log = require('./log.js');
 
 process.on('uncaughtException', function(err) {
   log('UncaughtException:', 'red');
@@ -13,17 +14,11 @@ process.on('uncaughtException', function(err) {
   }
 });
 
-function log(msg, color) {
-  var coloredMsg = color ? msg[color] : msg;
-  var date = new Date();
-  console.log(date.toLocaleTimeString('en-US').slice(0, 8) + ' ' + coloredMsg);
-}
-
 // TODO: Use arguments, configs.
 var baseDir = path.resolve(process.cwd(), process.argv[2]);
 var objDir = path.resolve(process.cwd(), process.argv[3]);
 var watchDir = path.resolve(process.cwd(), process.argv[4]);
-var machComand = path.resolve(process.cwd(), process.argv[5]);
+var machCommand = path.resolve(process.cwd(), process.argv[5]);
 
 // Naive sanity checks.
 fs.stat(baseDir, function (err, res) {
@@ -38,9 +33,9 @@ fs.stat(baseDir, function (err, res) {
       if (err) {
         return log('Watch dir missing: ' + watchDir, 'red');
       }
-      fs.stat(machComand, function (err, res) {
+      fs.stat(machCommand, function (err, res) {
         if (err || !res.isFile()) {
-          return log('Mach command missing: ' + machComand, 'red');
+          return log('Mach command missing: ' + machCommand, 'red');
         }
         start();
       });
@@ -66,7 +61,7 @@ function isInObj(f) {
 
 function isRightExt(f) {
   var ext = path.extname(f);
-  return ['.js', '.jsm', '.xul', '.xml'].indexOf(ext) >= 0;
+  return ['.js', '.jsm', '.xul', '.xml', '.css'].indexOf(ext) >= 0;
 }
 
 function startWatching(deps) {
@@ -83,31 +78,12 @@ function startWatching(deps) {
     }
     log('File ' + f + ' has changed.', 'yellow');
     deps.find(f).then(function (dirToBuild) {
-      build(dirToBuild);
+      machBuild(dirToBuild, {debounce: 100, machCommand: machCommand});
     }, function (reason) {
       log('  Unable to determine what to build: ' + reason, 'red');
       if (reason.stack) {
         log(reason.stack);
       }
     });
-  });
-}
-
-function build(file) {
-  var command = machComand + ' build "' + file + '"';
-
-  log('  Starting mach build: ' + command);
-  exec(command, function (error, stdout, stderr) {
-    log('  stdout:\n' + stdout);
-
-    var stderrstr = stderr.toString();
-    if (stderrstr) {
-      log('  stderr:\n' + stderr);
-    }
-    if (error !== null) {
-      log('  mach: ' + error, 'red');
-    } else {
-      log('  Build successful', 'green');
-    }
   });
 }
