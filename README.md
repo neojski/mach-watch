@@ -13,8 +13,5 @@ To install:
 Run
 ---
 
-These commands will change. Please make sure you use the right one.
-
-```bash
-node watch.js /mozilla/main/directory /mozilla/obj/directory /mozilla/directory/to/watch /path/to/mach/command
-```
+1. Set `MACH_COMMAND` environment variable to the path to your mach command.
+2. Run: `node watch.js /mozilla/directory/to/watch`.
