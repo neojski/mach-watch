@@ -25,7 +25,8 @@ var baseDir;
 var objDir;
 
 if (process.argv.length <= 2) {
-  fail('npm run watch /dir/to/watch')
+  log('Usage: mach-watch /dir/to/watch', 'green');
+  process.exit(1);
 }
 
 var watchDir = path.resolve(process.cwd(), process.argv[2]); // node watch.js ~/dir/to/watch

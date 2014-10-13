@@ -14,4 +14,4 @@ Run
 ---
 
 1. Set `MACH_COMMAND` environment variable to the path to your mach command.
-2. Run: `node watch.js /mozilla/directory/to/watch`.
+2. Run: `./mach-watch /mozilla/directory/to/watch`.
