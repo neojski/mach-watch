@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+var autobuild = require('./autobuild.js');
+var log = require('./log.js');
+
+var files = process.argv.slice(2);
+
+if (files.length === 0) {
+  log('Usage: mach-autobuild [file ...]');
+  process.exit(1);
+}
+
+autobuild().then(function (builder) {
+  builder.build(files, {debounce: 100});
+});

@@ -1,7 +1,7 @@
+var Promise = require('promise');
 var async = require('async');
 var fs = require('fs');
 var path = require('path');
-var Promise = require('promise');
 
 function LazyDeps (objDir, baseDir) {
   this.objDir = objDir;

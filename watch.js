@@ -1,10 +1,10 @@
+var Promise = require('Promise');
+var autobuild = require('./autobuild.js');
 var fs = require('fs');
-var path = require('path');
-var generateDeps = require('./generateDepsFromObjLazy.js');
 var fswatch = require('./fswatch.js');
 var log = require('./log.js');
 var mach = require('./mach.js');
-
+var path = require('path');
 
 process.on('uncaughtException', function(reason) {
   log('UncaughtException:', 'red');
@@ -19,11 +19,6 @@ function fail(reason) {
   process.exit(1);
 }
 
-// TODO: Get rid of globals.
-var mach;
-var baseDir;
-var objDir;
-
 if (process.argv.length <= 2) {
   log('Usage: mach-watch /dir/to/watch', 'green');
   process.exit(1);
@@ -35,28 +30,12 @@ fs.stat(watchDir, function (err, res) {
     return log('Watch dir missing: ' + watchDir, 'red');
   }
   process.chdir(watchDir);
-  mach.checkMach().then(function() {
-    return mach.getEnvironment();
-  }).then(start, fail);
+  Promise.all([autobuild(), mach.getEnvironment()]).then(function (res) {
+    startWatching(watchDir, res[0], res[1]);
+  }, fail);
 });
 
-function start(env) {
-  objDir = env['config topobjdir'][0];
-  baseDir = env['config topsrcdir'][0];
-
-  log('Base dir: ' + baseDir + '.', 'yellow');
-  log('Obj dir: ' + objDir + '.', 'yellow');
-  log('Preparing deps for obj dir: ' + objDir + '.', 'yellow');
-  var depsPromise = generateDeps(objDir, baseDir);
-  depsPromise.then(function (deps) {
-    log('Deps ready.', 'green');
-    startWatching(deps);
-  }).then(null, function (reason) {
-    log('Building deps failed: ' + reason, 'red');
-  });
-}
-
-function isInObj(f) {
+function isInObj(objDir, f) {
   return (f.slice(0, objDir.length) === objDir);
 }
 
@@ -65,26 +44,19 @@ function isRightExt(f) {
   return ['.js', '.jsm', '.xul', '.xml', '.css'].indexOf(ext) >= 0;
 }
 
-function startWatching(deps) {
+function startWatching(watchDir, builder, env) {
   log('Preparing files watcher.', 'yellow');
   log('Watcher started for dir: ' + watchDir + '.', 'green');
-
+  var objDir = env['config topobjdir'][0];
   var watcher = fswatch(watchDir);
   watcher.on('change', function (f) {
-    if (isInObj(f)) {
-      return;
+    if (isInObj(objDir, f)) {
+      return log('Ignoring ' + f + ' because it is in objdir.', 'yellow');
     }
     if (!isRightExt(f)) {
-      return log('Ignoring ' + f + ' due to extension (' + path.extname(f) + ')', 'yellow');
+      return log('Ignoring ' + f + ' due to extension (' + path.extname(f) + ').', 'yellow');
     }
     log('File ' + f + ' has changed.', 'yellow');
-    deps.find(f).then(function (dirToBuild) {
-      mach.build(dirToBuild, {debounce: 100});
-    }, function (reason) {
-      log('  Unable to determine what to build: ' + reason, 'red');
-      if (reason.stack) {
-        log(reason.stack);
-      }
-    });
+    builder.build([f], {debounce: 100});
   });
 }
