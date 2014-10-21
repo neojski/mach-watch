@@ -15,7 +15,11 @@ function promiseExec(command) {
       if (!error) {
         return resolve(stdout);
       }
-      reject('mach: Exec `' + command + '` failed. Exit code: ' + error.code + '. Stderr: ' + stderr);
+      reject({
+        stdout: stdout,
+        stderr: stderr,
+        code: error.code
+      });
     });
   });
 }
@@ -69,6 +73,11 @@ module.exports = {
     return promiseExec(command).then(function (stdout) {
       log('  mach: Build successful!', 'green');
       log('  mach: stdout:\n' + stdout, 'green');
+    }, function (reason) {
+      log('  mach: Build failed!', 'red');
+      log('  mach: Exit code: ' + reason.code);
+      log('  mach: Stdout: ' + reason.stdout);
+      log('  mach: Stderr: ' + reason.stderr);
     });
   },
 };

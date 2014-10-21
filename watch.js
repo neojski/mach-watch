@@ -51,7 +51,7 @@ function startWatching(watchDir, builder, env) {
   var watcher = fswatch(watchDir);
   watcher.on('change', function (f) {
     if (isInObj(objDir, f)) {
-      return log('Ignoring ' + f + ' because it is in objdir.', 'yellow');
+      return; // log('Ignoring ' + f + ' because it is in objdir.', 'yellow');
     }
     if (!isRightExt(f)) {
       return log('Ignoring ' + f + ' due to extension (' + path.extname(f) + ').', 'yellow');
