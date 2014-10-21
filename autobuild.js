@@ -1,13 +1,15 @@
+var fs = require('fs');
 var generateDeps = require('./generateDepsFromObjLazy.js');
 var log = require('./log.js');
 var mach = require('./mach.js');
+var path = require('path');
 
 module.exports = function() {
   return getMachEnv().then(getDeps).then(function (deps) {
     return {
       build: function(files, options) {
         files.forEach(function (f) {
-          autobuildFile(deps, f, options);
+          checkAndAutobuildFile(deps, path.resolve(process.cwd(), f), options);
         });
       }
     }
@@ -33,6 +35,15 @@ function getDeps(env) {
   }).then(null, function (reason) {
     log('Building deps failed: ' + reason, 'red');
     throw reason;
+  });
+}
+
+function checkAndAutobuildFile(deps, f, options) {
+  fs.exists(f, function(exists) {
+    if (!exists) {
+      return log('  File not found: ' + f, 'red');
+    }
+    autobuildFile(deps, f, options);
   });
 }
 
