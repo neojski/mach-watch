@@ -1,4 +1,4 @@
-var Promise = require('Promise');
+var Promise = require('promise');
 var exec = require('child_process').exec;
 var log = require('./log.js');
 var spawn = require('child_process').spawn;
