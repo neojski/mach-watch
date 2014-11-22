@@ -27,3 +27,9 @@ How does it compile
 -------------------
 
 Basically it just finds the closes parent directory in the obj directory that has a Makefile and compiles it.
+
+Bonus
+-----
+
+For working with more than one project using mach I created `mach` command you can make your global. It will delegate the work to the right mach (it will find the mach command in the ancestor
+directory or report failure).

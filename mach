@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Find mach command in the ancestor directory and run it or return 1.
+# Useful for developing more than one project with mach.
+
+dir=$PWD
+while [ -n "$dir" ]; do
+  if [ -f "$dir"/mach ]; then
+    "$dir"/mach "$@"
+    break
+  fi
+  dir=${dir%/*}
+done
+
+exit 1
